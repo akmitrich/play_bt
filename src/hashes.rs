@@ -1,4 +1,4 @@
-use serde::{de::Visitor, Deserialize};
+use serde::{de::Visitor, Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
 pub struct Hashes(Vec<[u8; 20]>);
@@ -31,5 +31,14 @@ impl<'de> Deserialize<'de> for Hashes {
         D: serde::Deserializer<'de>,
     {
         deserializer.deserialize_bytes(HashStrVisitor)
+    }
+}
+
+impl Serialize for Hashes {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_bytes(&self.0.concat())
     }
 }
