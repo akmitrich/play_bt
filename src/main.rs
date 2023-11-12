@@ -4,9 +4,11 @@ use anyhow::Context;
 use clap::{Parser, Subcommand};
 use play_bt::{
     info::Torrent,
+    peer::HandShake,
     tracker::{urlencode_bytes, TrackerRequest, TrackerResponse},
 };
 use std::path::PathBuf;
+use tokio::net::TcpStream;
 
 #[derive(Debug, Parser)]
 struct Args {
@@ -19,6 +21,7 @@ enum Command {
     Info { torrent: PathBuf },
     InfoHash { torrent: PathBuf },
     Peers { torrent: PathBuf },
+    Handshake { torrent: PathBuf, peer: String },
 }
 
 #[tokio::main]
@@ -60,6 +63,15 @@ async fn main() -> anyhow::Result<()> {
                 serde_bencode::from_bytes(&resp.bytes().await.context("response bytes")?)
                     .context("bencode decoding")?;
             println!("Tracker response: {:?}", tracker_resp);
+        }
+        Command::Handshake { torrent, peer } => {
+            let f = std::fs::read(torrent).context("open file")?;
+            let t: Torrent = serde_bencode::from_bytes(&f).context("bencode format")?;
+            let h = HandShake::new(t.info_hash(), *b"AlexanderKalashnikov");
+            let mut peer = TcpStream::connect(peer).await.context("connect to peer")?;
+            h.send(&mut peer).await?;
+            let answer = HandShake::recv(&mut peer).await?;
+            println!("Handshake: {:?} -> {:?}", h, answer);
         }
     }
     Ok(println!("Hello, world!"))
