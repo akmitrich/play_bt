@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use sha1::Digest;
 
-use crate::hashes::Hashes;
+pub use crate::hashes::Hashes;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Torrent {
@@ -42,5 +42,18 @@ impl Torrent {
         let mut hasher = sha1::Sha1::new();
         hasher.update(&encoded);
         hasher.finalize().into()
+    }
+
+    pub fn announce(&self) -> &str {
+        &self.announce
+    }
+}
+
+impl Info {
+    pub fn length(&self) -> usize {
+        match &self.keys {
+            Keys::SingleFile { length } => *length,
+            Keys::MultiFile { files } => files.iter().map(|f| f.length).sum(),
+        }
     }
 }
